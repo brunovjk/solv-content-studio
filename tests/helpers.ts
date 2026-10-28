@@ -3,7 +3,7 @@ import { createDemoArticle } from "../src/feeds.ts";
 import { createDemoDraft } from "../src/gemini.ts";
 import type { Env, Illustration, Post, Repository, Run, Settings } from "../src/types.ts";
 
-export const configuredSettings = (): Settings => ({ ...structuredClone(defaultSettings), brandName: "Solv", mode: "auto", paused: false, brandHandle: "@solv_tec", sources: [{ id: "foreign", name: "Foreign Clinic News", url: "https://news.example.com/feed.xml", website: "https://news.example.com", language: "en", enabled: true }], channels: [{ id: "instagram-1", name: "@solv_tec", service: "instagram", enabled: true }] });
+export const configuredSettings = (): Settings => ({ ...structuredClone(defaultSettings), brandName: "Solv", mode: "auto", paused: false, brandHandle: "@solv.insta", sources: [{ id: "foreign", name: "Foreign Clinic News", url: "https://news.example.com/feed.xml", website: "https://news.example.com", language: "en", enabled: true }], channels: [{ id: "instagram-1", name: "@solv.insta", service: "instagram", enabled: true }] });
 export const configuredEnv = (): Env => ({ ADMIN_TOKEN: "test-admin-token-with-enough-length", GEMINI_API_KEY: "test-gemini-key", BUFFER_API_KEY: "test-buffer-key", CF_ACCOUNT_ID: "a".repeat(32), CF_BROWSER_API_TOKEN: "test-cf-key", PUBLIC_BASE_URL: "https://clinic-content-bot.workers.dev" } as Env);
 export const preparedPost = (): Post => ({ id: "local-post", articleId: "local-article", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), content: createDemoDraft(createDemoArticle(), configuredSettings()), status: "ready", imageReady: true, deliveries: [], demo: false });
 

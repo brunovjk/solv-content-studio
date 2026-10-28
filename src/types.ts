@@ -85,6 +85,7 @@ export interface Post {
   content: DraftContent;
   status: PostStatus;
   imageReady: boolean;
+  uploadedImage?: { mimeType: "image/jpeg" | "image/png"; width: number; height: number };
   deliveries: Delivery[];
   demo: boolean;
   scheduledAt?: string;

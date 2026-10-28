@@ -97,7 +97,7 @@ test("both partners can approve posts and accepted deliveries remain shared and 
 test("partners can synchronize channels and archive content in the shared workspace",async t=>{
   const f=fixture(t);await f.repo.saveSettings(configuredSettings());
   let calls=0;
-  t.mock.method(globalThis,"fetch",async()=>{calls++;return Response.json({data:calls===1?{account:{organizations:[{id:"org"}]}}:{channels:[{id:"instagram-1",name:"solv_tec",service:"instagram"}]}});});
+  t.mock.method(globalThis,"fetch",async()=>{calls++;return Response.json({data:calls===1?{account:{organizations:[{id:"org"}]}}:{channels:[{id:"instagram-1",name:"solv.insta",service:"instagram"}]}});});
   // Given an existing connected channel, a partner can refresh its operational connection.
   assert.equal((await worker.fetch(f.request("/api/channels/sync","POST",{},partnerTokens[0]),f.env)).status,200);
   assert.equal(calls,2);

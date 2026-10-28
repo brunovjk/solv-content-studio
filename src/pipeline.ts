@@ -1,3 +1,4 @@
+import { mediaExtension } from "./manual.ts";
 import { collectArticles, createDemoArticle } from "./feeds.ts";
 import { createDemoDraft, generateDraft } from "./gemini.ts";
 import { canRenderArtwork, renderArtwork } from "./artwork.ts";
@@ -11,7 +12,7 @@ const iso = () => new Date().toISOString();
 
 /** A saved illustration is reused for preview, approval and final PNG. Failure uses the original graphic layout. */
 export async function preparePostVisual(env: Env, repo: Repository, post: Post, retry = false): Promise<Post> {
-  if (post.demo || (post.visual?.status === "fallback" && !retry)) return post;
+  if (post.demo || post.uploadedImage || (post.visual?.status === "fallback" && !retry)) return post;
   if (post.visual?.status === "ready" && await repo.getIllustration(post.id)) return post;
   const previousStatus = post.status;
   post.status = "rendering"; post.updatedAt = iso(); await repo.savePost(post);
@@ -27,11 +28,11 @@ export async function preparePostVisual(env: Env, repo: Repository, post: Post, 
   return post;
 }
 
-export function missingPublicationRequirements(env: Env, settings: Settings): string[] {
+export function missingPublicationRequirements(env: Env, settings: Settings, post?: Post): string[] {
   const missing: string[] = [];
   if (env.DEMO_MODE === "true") missing.push("ambiente local em modo teste");
   if (!env.BUFFER_API_KEY) missing.push("conexão Buffer");
-  if (!canRenderArtwork(env)) missing.push("renderização PNG na Cloudflare");
+  if (!post?.uploadedImage && !canRenderArtwork(env)) missing.push("renderização PNG na Cloudflare");
   if (!env.PUBLIC_BASE_URL || !safePublicUrl(env.PUBLIC_BASE_URL)) missing.push("endereço público HTTPS");
   if (!settings.channels.some(c => c.enabled)) missing.push("pelo menos uma rede habilitada");
   if (/^(Marca provisória|Sua empresa)$/i.test(settings.brandName)) missing.push("nome da marca");
@@ -54,8 +55,9 @@ export async function publishPreparedPost(env: Env, repo: Repository, post: Post
   if (post.demo) throw new Error("Simulações não podem ser publicadas.");
   if (settings.paused) throw new Error("O bot está pausado.");
   if (post.deliveries.some(d => d.status === "sending" || d.status === "unknown")) throw new Error("Envio sem confirmação. Confira o Buffer antes de tentar novamente.");
+  if (post.uploadedImage && (!post.imageReady || !await repo.getImage(post.id))) throw new Error("A foto deste post não está disponível. Crie um novo rascunho.");
   if (!post.imageReady) post = await preparePostVisual(env,repo,post);
-  const missing = missingPublicationRequirements(env, settings);
+  const missing = missingPublicationRequirements(env, settings, post);
   if (missing.length) {
     post.status = "ready";
     post.error = `Pronto para testar. Para publicar: ${missing.join(", ")}.`;
@@ -82,7 +84,7 @@ export async function publishPreparedPost(env: Env, repo: Repository, post: Post
     delivery.status = "sending"; delivery.error = undefined; post.updatedAt = iso();
     await repo.savePost(post);
     try {
-      const result = await enqueuePost(post, channel, `${env.PUBLIC_BASE_URL!.replace(/\/$/, "")}/media/${post.id}.png`, env, fetcher);
+      const result = await enqueuePost(post, channel, `${env.PUBLIC_BASE_URL!.replace(/\/$/, "")}/media/${post.id}.${mediaExtension(post)}`, env, fetcher);
       delivery.remoteId = result.id; delivery.dueAt = result.dueAt; delivery.status = "queued";
     } catch (error) {
       delivery.status = error instanceof AmbiguousPublishError ? "unknown" : "error";

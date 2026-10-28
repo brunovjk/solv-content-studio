@@ -3,7 +3,7 @@
 [Acessar o Solv Studio](https://solv-studio-brunovjk.web.app/) · [Código no GitHub](https://github.com/brunovjk/solv-content-studio)
 
 
-Ferramenta da [Solv](https://solv-cf55a.web.app/) para preparar textos e artes do [@solv_tec](https://www.instagram.com/solv_tec/). O foco inicial é apresentar a oferta de sites para negócios e profissionais de beleza e estética.
+Ferramenta da [Solv](https://solv-cf55a.web.app/) para preparar textos e artes do [@solv.insta](https://www.instagram.com/solv.insta/). O foco inicial é apresentar a oferta de sites para negócios e profissionais de beleza e estética.
 
 ## Arquitetura
 
@@ -110,7 +110,7 @@ As artes salvas são reutilizadas ao abrir a prévia, preparar o PNG e aprovar u
 
 ## Publicação e operação
 
-Conecte **@solv_tec** ao Buffer como perfil profissional com publicação automática disponível. Configure `BUFFER_API_KEY` no backend, sincronize canais com um acesso de administrador ou sócio e habilite somente o destino correto.
+Conecte **@solv.insta** ao Buffer como perfil profissional com publicação automática disponível. Configure `BUFFER_API_KEY` no backend, sincronize canais com um acesso de administrador ou sócio e habilite somente o destino correto.
 
 A agenda inicial da Solv é segunda, quarta e sexta às 09h, em `America/Sao_Paulo`; o horário é ajustável. A automação permanece pausada durante a revisão editorial. Administrador e sócios podem administrar a rotina; o editor opcional não tem esse controle.
 
@@ -139,6 +139,8 @@ Cada instalação mantém uma marca. Outros clientes podem usar instalações se
 
 ## Uso diário
 
-O login abre em **Publicações**. **Gerar post** sempre cria um rascunho, inclusive quando a automação está pausada. Revise o texto e a arte e use **Publicar** para enviar; os canais e a rotina precisam estar habilitados. A geração automática agendada continua seguindo o modo configurado.
+O login abre em **Publicações**. **Gerar com IA** sempre cria um rascunho, inclusive quando a automação está pausada. Revise o texto e a arte e use **Publicar** para enviar; os canais e a rotina precisam estar habilitados. A geração automática agendada continua seguindo o modo configurado.
+
+**Criar manualmente** permite escolher uma foto JPG, PNG ou WebP (até 10 MB) e escrever uma legenda de até 1800 caracteres. A foto é preparada no navegador e salva em JPEG de até 1,5 MB; proporções fora do formato aceito recebem margens, sem corte. O rascunho não usa IA e só é enviado após **Publicar**. Depois de salvo, sua legenda pode ser editada. Nesta versão, cada post manual aceita uma foto.
 
 Importação e simulação ficam em **Mais opções**. Marca, agenda, limites, fontes, histórico e detalhes técnicos permanecem disponíveis em seções recolhidas. Falhas e pendências de publicação continuam visíveis.

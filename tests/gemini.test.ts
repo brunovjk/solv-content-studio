@@ -119,7 +119,7 @@ test("editorial context follows the configured audience instead of hardcoding cl
 
 
 test("passes client offer and creative direction while keeping external text isolated", async () => {
-  const client = { ...settings, brandHandle: "@solv_tec", brandColor: "#64b5ff", websiteUrl: "https://solv-cf55a.web.app/", offerSummary: "Sites com acesso à agenda existente. Não inclui agenda própria.", editorialGuidelines: "Fale com gestores de beleza; use exemplos concretos.", visualGuidelines: "Grafite, azul e ciano; sem robôs." };
+  const client = { ...settings, brandHandle: "@solv.insta", brandColor: "#64b5ff", websiteUrl: "https://solv-cf55a.web.app/", offerSummary: "Sites com acesso à agenda existente. Não inclui agenda própria.", editorialGuidelines: "Fale com gestores de beleza; use exemplos concretos.", visualGuidelines: "Grafite, azul e ciano; sem robôs." };
   await generateDraft(article, client, env, (async (_url, init) => {
     const request = JSON.parse(String(init?.body));
     const system = request.systemInstruction.parts[0].text;

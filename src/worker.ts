@@ -1,3 +1,4 @@
+import { manualPost, mediaExtension, MAX_UPLOAD_BODY } from "./manual.ts";
 import { dashboardHtml } from "./dashboard.ts";
 import { artworkHtml, canRenderArtwork, renderArtwork } from "./artwork.ts";
 import { listBufferChannels } from "./buffer.ts";
@@ -13,8 +14,8 @@ const json = (value: unknown, status = 200, extra: Record<string,string> = {}) =
 const failure = (message: string, status = 400) => json({error:message}, status);
 const now = () => new Date().toISOString();
 
-async function body(request: Request): Promise<Record<string,unknown>> {
-  const value = JSON.parse(await readLimitedText(new Response(request.body, {headers:request.headers}), 65536));
+async function body(request: Request, limit = 65536): Promise<Record<string,unknown>> {
+  const value = JSON.parse(await readLimitedText(new Response(request.body, {headers:request.headers}), limit));
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Dados inválidos.");
   return value as Record<string,unknown>;
 }
@@ -53,11 +54,13 @@ async function handle(request: Request, env: Env): Promise<Response> {
   if (path === "/" && request.method === "GET") return new Response(dashboardHtml(), {headers:{"Content-Type":"text/html; charset=utf-8", "Cache-Control":"no-store"}});
   if (path === "/favicon.ico") return new Response(null,{status:204});
   if (path === "/api/health") return json({ok:true,service:"solv-studio"});
-  const media = path.match(/^\/media\/([a-f0-9-]{36})\.png$/);
+  const media = path.match(/^\/media\/([a-f0-9-]{36})\.(png|jpg)$/);
   if (media && ["GET","HEAD"].includes(request.method)) {
+    const post = await repo.getPost(media[1]);
+    if (media[2] !== (post ? mediaExtension(post) : "png")) return failure("Imagem não encontrada.",404);
     const image = await repo.getImage(media[1]);
     if (!image) return failure("Imagem não encontrada.",404);
-    return new Response(request.method === "HEAD" ? null : image,{headers:{"Content-Type":"image/png","Content-Length":String(image.byteLength),"Cache-Control":"public,max-age=86400"}});
+    return new Response(request.method === "HEAD" ? null : image,{headers:{"Content-Type":post?.uploadedImage?.mimeType || "image/png","Content-Length":String(image.byteLength),"Cache-Control":"public,max-age=86400"}});
   }
   if (!["GET","HEAD"].includes(request.method)) {
     const origin = request.headers.get("Origin");
@@ -80,7 +83,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
   if (path === "/api/logout" && request.method === "POST") return json({ok:true},200,{"Set-Cookie":sessionCookie(request,"",true)});
   if (path === "/api/state" && request.method === "GET") {
     const [settings,posts,runs,busy] = await Promise.all([repo.getSettings(),repo.listPosts(),repo.listRuns(),repo.busy()]);
-    return json({role,subject:identity.subject,settings,posts,runs,busy,readiness:{demo:env.DEMO_MODE === "true",gemini:Boolean(env.GEMINI_API_KEY),buffer:Boolean(env.BUFFER_API_KEY),illustration:Boolean(env.AI),artwork:canRenderArtwork(env),publicUrl:Boolean(env.PUBLIC_BASE_URL?.startsWith("https://")),admin:true},publicationMissing:missingPublicationRequirements(env,settings)});
+    return json({role,subject:identity.subject,settings,posts,runs,busy,readiness:{demo:env.DEMO_MODE === "true",gemini:Boolean(env.GEMINI_API_KEY),buffer:Boolean(env.BUFFER_API_KEY),illustration:Boolean(env.AI),artwork:canRenderArtwork(env),publicUrl:Boolean(env.PUBLIC_BASE_URL?.startsWith("https://")),admin:true},publicationMissing:missingPublicationRequirements(env,settings),manualPublicationMissing:missingPublicationRequirements(env,settings,{uploadedImage:{mimeType:"image/jpeg",width:1080,height:1080}} as Post)});
   }
   if (path === "/api/settings" && request.method === "PUT") {
     const settings = validateSettings(await body(request));
@@ -100,6 +103,20 @@ async function handle(request: Request, env: Env): Promise<Response> {
     try { for (const id of input.ids as string[]) {const post=await repo.getPost(id);if(post){post.archivedAt=now();await repo.savePost(post);archived.push(id);}} }
     finally { await repo.releaseLock("pipeline"); }
     return json({ok:true,archived});
+  }
+  if (path === "/api/posts/manual" && request.method === "POST") {
+    const {post,image}=manualPost(await body(request,MAX_UPLOAD_BODY));
+    if (!await repo.acquireLock("pipeline",60)) return failure("Aguarde a execução atual terminar.",409);
+    try {
+      const existing=await repo.getPost(post.id);
+      if (existing) {
+        if (!existing.uploadedImage || existing.archivedAt) return failure("Identificador já utilizado.",409);
+        return json({ok:true,post:existing,existing:true});
+      }
+      await repo.saveImage(post.id,image);
+      await repo.savePost(post);
+      return json({ok:true,post},201);
+    } finally { await repo.releaseLock("pipeline"); }
   }
   if (path === "/api/drafts/import" && request.method === "POST") {
     const posts = validateDraftImport(await body(request));
@@ -172,6 +189,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
       return json({ok:true,message:"Publicação solicitada."},202);
     }
     if (!editable(post)) return failure("Esse post já foi enviado ou aguarda confirmação. Faça alterações diretamente no Buffer ou na rede.");
+    if (post.uploadedImage && request.method === "POST" && ["render","visual"].includes(match[2])) return failure("Este post usa sua própria foto.",409);
     if (request.method === "POST" && match[2] === "render") {
       if (post.demo || post.status === "rejected") return failure("Use uma publicação real que ainda não foi descartada.",409);
       if (!canRenderArtwork(env)) return failure("Ative a conexão Browser Run na configuração Cloudflare.",503);
@@ -190,6 +208,13 @@ async function handle(request: Request, env: Env): Promise<Response> {
     }
     if (request.method === "PATCH" && !match[2]) {
       const changes = await body(request);
+      if (post.uploadedImage) {
+        if (Object.keys(changes).some(key=>key!=="caption")) return failure("Edite apenas a legenda deste post.");
+        if (typeof changes.caption!=="string" || !changes.caption.trim() || changes.caption.trim().length>1800) return failure("Escreva uma legenda de até 1800 caracteres.");
+        post.content.caption=changes.caption.trim();post.content.title=post.content.caption.split(/\r?\n/)[0].slice(0,88);
+        post.status="draft";post.updatedAt=now();post.error=undefined;
+        await repo.savePost(post);return json({ok:true,post});
+      }
       for (const [field,max] of [["caption",1800],["title",88],["artTitle",54],["subtitle",150]] as const) {
         if (changes[field] !== undefined) {
           if (typeof changes[field] !== "string" || !changes[field].trim() || changes[field].length > max) return failure(`${field}: tamanho inválido.`);
@@ -240,7 +265,7 @@ async function createVisual(env: Env, postId: string) {
   try {
     await repo.saveRun(run);
     const post = await repo.getPost(postId);
-    if (!post || post.archivedAt || post.demo || post.status === "rejected" || !editable(post)) throw new Error("Esta publicação não pode ter sua arte alterada.");
+    if (!post || post.archivedAt || post.demo || post.uploadedImage || post.status === "rejected" || !editable(post)) throw new Error("Esta publicação não pode ter sua arte alterada.");
     const result = await preparePostVisual(env,repo,post,true);
     run.status = result.visual?.status === "ready" ? "success" : "error";
     run.message = result.visual?.status === "ready" ? "Imagem criada e salva na prévia. Nada foi publicado." : result.visual?.error || "Imagem indisponível. A composição gráfica continua disponível.";
@@ -260,7 +285,7 @@ async function createPng(env: Env, postId: string) {
   try {
     await repo.saveRun(run);
     post = await repo.getPost(postId);
-    if (!post || post.archivedAt || post.demo || post.status === "rejected" || !editable(post)) throw new Error("Esta publicação não pode ter sua arte alterada.");
+    if (!post || post.archivedAt || post.demo || post.uploadedImage || post.status === "rejected" || !editable(post)) throw new Error("Esta publicação não pode ter sua arte alterada.");
     previousStatus = post.status;
     if (!post.imageReady || !await repo.getImage(post.id)) {
       post.status = "rendering"; post.updatedAt = now(); await repo.savePost(post);

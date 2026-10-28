@@ -63,7 +63,7 @@ function validUrl(value: string, httpsOnly = false): string {
 
 /** Reserve room for the source and hashtags; the Instagram limit includes everything. */
 export function postCaption(content: DraftContent, service = "instagram"): string {
-  const source = `Fonte: ${content.sourceName.replace(/[\r\n]/g, " ").slice(0, 100)}\n${validUrl(content.sourceUrl)}`;
+  const source = content.origin === "authored" ? "" : `Fonte: ${content.sourceName.replace(/[\r\n]/g, " ").slice(0, 100)}\n${validUrl(content.sourceUrl)}`;
   const tags = [...new Set(content.hashtags.map((tag) => tag.replace(/^#+/, "").replace(/[^\p{L}\p{N}_]/gu, "")).filter(Boolean))]
     .slice(0, 8).map((tag) => `#${Array.from(tag).slice(0, 50).join("")}`).join(" ");
   const footer = content.origin === "authored" ? (tags ? `\n\n${tags}` : "") : `\n\n${source}${tags ? `\n\n${tags}` : ""}`;
@@ -123,7 +123,7 @@ export async function enqueuePost(post: Post, channel: Channel, imageUrl: string
     dueAt,
     needsApproval: false,
     saveToDraft: false,
-    aiAssisted: true,
+    aiAssisted: !post.uploadedImage,
     source: "clinic-content-bot",
     assets: [{ image: { url: validUrl(imageUrl, true) } }],
     ...(channel.service === "instagram" ? { metadata: { instagram: { type: "post", shouldShareToFeed: true } } } : {}),

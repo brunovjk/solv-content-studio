@@ -8,7 +8,7 @@ test("Solv defaults start paused for approval with no channels connected", () =>
   assert.equal(settings.mode, "approval");
   assert.equal(settings.paused, true);
   assert.equal(settings.brandName, "Solv");
-  assert.equal(settings.brandHandle, "@solv_tec");
+  assert.equal(settings.brandHandle, "@solv.insta");
   assert.deepEqual(settings.channels, []);
 });
 

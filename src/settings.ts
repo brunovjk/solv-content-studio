@@ -2,7 +2,7 @@ import type { Settings, Source } from "./types.ts";
 
 export const defaultSettings: Settings = {
   brandName: "Solv",
-  brandHandle: "@solv_tec",
+  brandHandle: "@solv.insta",
   brandColor: "#64b5ff",
   websiteUrl: "",
   offerSummary: "",

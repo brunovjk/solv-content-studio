@@ -1,6 +1,6 @@
 # Solv · preparação editorial
 
-Marca oficial: Solv · @solv_tec. A rotina permanece pausada durante a revisão da campanha. O painel editorial é hospedado no Firebase e usa o backend Cloudflare protegido; administrador e sócios podem criar, revisar e publicar conteúdo, enquanto o editor opcional mantém acesso restrito à criação.
+Marca oficial: Solv · @solv.insta. A rotina permanece pausada durante a revisão da campanha. O painel editorial é hospedado no Firebase e usa o backend Cloudflare protegido; administrador e sócios podem criar, revisar e publicar conteúdo, enquanto o editor opcional mantém acesso restrito à criação.
 
 ## Oferta
 
@@ -49,4 +49,4 @@ Os sócios usam credenciais individuais (`PARTNER_1_TOKEN` e `PARTNER_2_TOKEN`) 
 
 ## Retomar publicação
 
-Conectar @solv_tec no Buffer, sincronizar canais e habilitar somente o perfil correto. Conferir prévias/legendas, testar uma publicação e só então escolher entre aprovação e automático. A rotina permanece pausada durante a preparação. Pausar o bot não cancela um post já aceito pelo Buffer.
+Conectar @solv.insta no Buffer, sincronizar canais e habilitar somente o perfil correto. Conferir prévias/legendas, testar uma publicação e só então escolher entre aprovação e automático. A rotina permanece pausada durante a preparação. Pausar o bot não cancela um post já aceito pelo Buffer.

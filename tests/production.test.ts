@@ -149,8 +149,8 @@ test("channel sync omits ignored staging channels and never enables a new one", 
   const storage=sqliteD1();t.after(storage.close);
   const repo=new D1Repository(storage.db);await repo.saveSettings(configuredSettings());
   const env={...configuredEnv(),DB:storage.db,IGNORED_CHANNEL_IDS:"staging-channel",JOBS:{send:async()=>{}}} as unknown as Env;
-  let calls=0;t.mock.method(globalThis,"fetch",async()=>{calls++;return Response.json({data:calls===1?{account:{organizations:[{id:"org"}]}}:{channels:[{id:"staging-channel",name:"Staging",service:"instagram"},{id:"official-channel",name:"solv_tec",service:"instagram"}]}});});
+  let calls=0;t.mock.method(globalThis,"fetch",async()=>{calls++;return Response.json({data:calls===1?{account:{organizations:[{id:"org"}]}}:{channels:[{id:"staging-channel",name:"Staging",service:"instagram"},{id:"official-channel",name:"solv.insta",service:"instagram"}]}});});
   const response=await worker.fetch(new Request("https://bot.example.com/api/channels/sync",{method:"POST",headers:{Authorization:"Bearer "+env.ADMIN_TOKEN,"Content-Type":"application/json"},body:"{}"}),env);
   assert.equal(response.status,200);
-  assert.deepEqual((await response.json() as {channels:unknown[]}).channels,[{id:"official-channel",name:"solv_tec",service:"instagram",enabled:false}]);
+  assert.deepEqual((await response.json() as {channels:unknown[]}).channels,[{id:"official-channel",name:"solv.insta",service:"instagram",enabled:false}]);
 });
