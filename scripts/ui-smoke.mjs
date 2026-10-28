@@ -29,7 +29,9 @@ try {
   await context.request.put(base+"/api/settings",{data:original});
   await page.locator('[data-view="overview"]').click();
   const before = state.posts.length;
-  await page.locator('#view-overview [data-run="demo"]').click();
+  await page.locator('[data-view="posts"]').click();
+  await page.getByText('Mais opções',{exact:true}).click();
+  await page.locator('#view-posts [data-run="demo"]').click();
   let post;
   for (let i=0;i<80;i++) {
     state = await (await context.request.get(base+"/api/state")).json();
@@ -43,13 +45,14 @@ try {
   assert.equal(post.deliveries.length,0,"Demo must not create any live deliveries");
   assert.equal(state.settings.mode,original.mode);
   await page.reload();
+  await page.locator('[data-view="overview"]').click();
   await page.locator("#featured-art iframe").waitFor();
   await page.waitForTimeout(300);
   assert.ok(await page.locator("#featured-title").innerText());
   await page.screenshot({path:"test-results/dashboard-desktop.png",fullPage:true});
   await page.locator('[data-view="posts"]').click();
   await page.locator("#post-detail h2").waitFor();
-  assert.equal(await page.locator('#post-detail button').filter({hasText:/Aprovar|Enviar/}).count(),0,"Demo must not allow live delivery");
+  assert.equal(await page.locator('#post-detail button').filter({hasText:/Aprovar|Enviar|Publicar/}).count(),0,"Demo must not allow live delivery");
   await page.screenshot({path:"test-results/posts-desktop.png",fullPage:true});
   const art = await context.newPage();
   await art.setViewportSize({width:1080,height:1350});
@@ -58,7 +61,7 @@ try {
   const artBounds = await art.locator("footer").boundingBox();
   assert.ok(artBounds && artBounds.y+artBounds.height < 1340,"Artwork footer is clipped");
   await page.locator('[data-view="connections"]').click();
-  assert.equal(await page.getByRole("heading",{name:"Canais de publicação",exact:true}).count(),1);
+  assert.equal(await page.getByRole("heading",{name:"Canais",exact:true}).count(),1);
   for (const channel of state.settings.channels) assert.ok((await page.locator("#channels-list").innerText()).includes(channel.name));
   assert.equal(await page.locator("#sync-channels").isDisabled(),!state.readiness.buffer);
   await page.screenshot({path:"test-results/connections-desktop.png",fullPage:true});

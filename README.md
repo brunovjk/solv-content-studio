@@ -136,3 +136,9 @@ npm run check:feeds
 `src/worker.ts` contém API e tarefas; `auth.ts`, acesso; `pipeline.ts`, geração e envio; `feeds.ts`, referências; `gemini.ts`, texto; `visuals.ts` e `artwork.ts`, imagens; `buffer.ts`, canais; `repository.ts`, persistência; `dashboard.ts`, interface. `migrations/` define o banco e `tests/` contém as verificações.
 
 Cada instalação mantém uma marca. Outros clientes podem usar instalações separadas com banco, fila, credenciais e canais próprios. Vários clientes com dados e permissões isolados em um único painel ainda exigem implementação específica.
+
+## Uso diário
+
+O login abre em **Publicações**. **Gerar post** sempre cria um rascunho, inclusive quando a automação está pausada. Revise o texto e a arte e use **Publicar** para enviar; os canais e a rotina precisam estar habilitados. A geração automática agendada continua seguindo o modo configurado.
+
+Importação e simulação ficam em **Mais opções**. Marca, agenda, limites, fontes, histórico e detalhes técnicos permanecem disponíveis em seções recolhidas. Falhas e pendências de publicação continuam visíveis.
