@@ -15,11 +15,20 @@ Ferramenta da [Solv](https://solv-cf55a.web.app/) para preparar textos e artes d
 
 O Firebase hospeda a interface; o processamento e os segredos continuam no backend Cloudflare. Publicar o painel não ativa postagens nas redes.
 
-## Acesso para revisão
+## Acessos da equipe
 
-O painel exige login. A credencial de **editor** permite revisar e editar conteúdo e solicitar as gerações autorizadas. Ela não permite publicar, habilitar canais, alterar a agenda de entrega ou despausar a automação. O administrador mantém esses controles.
+Todos acessam **os mesmos posts, imagens, fontes e configurações** da Solv. Uma senha individual identifica quem entrou; ela não cria outra cópia do painel ou outro banco de dados.
 
-`ADMIN_TOKEN` e `EDITOR_TOKEN` são configurados no backend. Não compartilhe a credencial administrativa para uma revisão editorial, nem coloque tokens de serviços no código do frontend.
+| Acesso | Credencial | Permissões no painel |
+|---|---|---|
+| Administrador | `ADMIN_TOKEN` | Conteúdo, publicação, canais, agenda e demais configurações. |
+| Sócio 1 | `PARTNER_1_TOKEN` | Conteúdo, publicação, canais, agenda e demais configurações. |
+| Sócio 2 | `PARTNER_2_TOKEN` | Conteúdo, publicação, canais, agenda e demais configurações. |
+| Editor opcional | `EDITOR_TOKEN` | Revisão, edição e geração de rascunhos; sem publicação nem alteração da rotina. |
+
+As credenciais ficam no backend, são individuais e nunca entram no código do frontend. Alterar ou remover a senha de um sócio revoga somente o acesso e as sessões desse sócio.
+
+O login do painel não concede acesso ao GitHub, Firebase, Cloudflare ou às chaves dos provedores. Como o repositório é público, seu código pode ser lido por qualquer pessoa; modificar o código de produção ou fazer deploy exige permissões separadas nessas plataformas.
 
 ## Desenvolvimento local
 
@@ -60,13 +69,16 @@ Ajuste nomes, bindings e IDs conforme o exemplo. Defina `PUBLIC_BASE_URL` com o 
 ```sh
 npm run db:remote
 npx wrangler secret put ADMIN_TOKEN
+npx wrangler secret put PARTNER_1_TOKEN
+npx wrangler secret put PARTNER_2_TOKEN
+# Opcional, para uma pessoa com acesso editorial restrito:
 npx wrangler secret put EDITOR_TOKEN
 npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put BUFFER_API_KEY
 npm run deploy
 ```
 
-Use credenciais administrativas e editoriais diferentes, aleatórias e com pelo menos 24 caracteres. As chaves de serviços permanecem nos secrets do Worker. Só ative execução real e canais após revisar a configuração; instalações novas começam pausadas e com aprovação.
+Use credenciais individuais diferentes, aleatórias e com pelo menos 24 caracteres para o administrador, cada sócio e o editor opcional. As chaves de serviços permanecem nos secrets do Worker. Só ative execução real e canais após revisar a configuração; instalações novas começam pausadas e com aprovação.
 
 ## Hospedar o painel no Firebase
 
@@ -98,9 +110,9 @@ As artes salvas são reutilizadas ao abrir a prévia, preparar o PNG e aprovar u
 
 ## Publicação e operação
 
-Conecte **@solv_tec** ao Buffer como perfil profissional com publicação automática disponível. Configure `BUFFER_API_KEY` no backend, sincronize canais no painel administrativo e habilite somente o destino correto.
+Conecte **@solv_tec** ao Buffer como perfil profissional com publicação automática disponível. Configure `BUFFER_API_KEY` no backend, sincronize canais com um acesso de administrador ou sócio e habilite somente o destino correto.
 
-A agenda inicial da Solv é segunda, quarta e sexta às 09h, em `America/Sao_Paulo`; o horário é ajustável. A automação permanece pausada durante a revisão editorial e não é controlada pelo acesso de editor.
+A agenda inicial da Solv é segunda, quarta e sexta às 09h, em `America/Sao_Paulo`; o horário é ajustável. A automação permanece pausada durante a revisão editorial. Administrador e sócios podem administrar a rotina; o editor opcional não tem esse controle.
 
 **Na fila** significa aceito pelo Buffer; **Publicado** exige confirmação do canal. Um envio incerto não é repetido automaticamente. Pausar o bot impede novas execuções, mas não cancela posts já aceitos pelo Buffer. Conteúdo entregue deve ser alterado no Buffer ou na própria rede.
 

@@ -117,6 +117,8 @@ export interface Env {
   BROWSER?: { quickAction(action: "screenshot", options: BrowserRunScreenshotOptions): Promise<Response> };
   ADMIN_TOKEN?: string;
   EDITOR_TOKEN?: string;
+  PARTNER_1_TOKEN?: string;
+  PARTNER_2_TOKEN?: string;
   ALLOWED_ORIGINS?: string;
   IGNORED_CHANNEL_IDS?: string;
   GEMINI_API_KEY?: string;

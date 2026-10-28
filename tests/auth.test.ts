@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { authenticatedRole, createSession, isAuthenticated, sameSecret, sessionCookie } from "../src/auth.ts";
+import { authenticatedIdentity, authenticatedRole, createIdentitySession, createSession, isAuthenticated, sameSecret, sessionCookie } from "../src/auth.ts";
 import type { Env } from "../src/types.ts";
 
 const secret = "test-admin-secret-at-least-24-characters";
@@ -80,6 +80,8 @@ test("signed sessions preserve roles in Bearer headers and cookies, including le
     assert.ok(payload.nonce);
     assert.doesNotMatch(session,/test-admin|test-editor/);
   }
+  const legacyEditor = await signedSession(Date.now()+60000,"editor");
+  assert.deepEqual(await authenticatedIdentity(req({Authorization:`Bearer ${legacyEditor}`}),rolesEnv),{role:"editor",subject:"editor"});
   const legacy = await signedSession(Date.now()+60000);
   assert.equal(await authenticatedRole(req({Cookie:`bot_session=${legacy}`}),rolesEnv),"owner");
   assert.equal(await authenticatedRole(req({Authorization:`Bearer ${legacy}`}),rolesEnv),"owner");
@@ -120,5 +122,78 @@ test("explicit invalid authorization does not inherit the owner's ambient cookie
   const ownerSession = await createSession(secret);
   for (const authorization of ["Bearer invalid","Bearer ",`Basic ${secret}`]) {
     assert.equal(await authenticatedRole(req({Authorization:authorization,Cookie:`bot_session=${ownerSession}`}),env),null);
+  }
+});
+
+
+const partnerOne = "test-partner-one-secret-at-least-24-characters";
+const partnerTwo = "test-partner-two-secret-at-least-24-characters";
+const partnersEnv = {...env,PARTNER_1_TOKEN:partnerOne,PARTNER_2_TOKEN:partnerTwo} as Env;
+
+test("individual partner credentials identify separate people with the same partner role", async () => {
+  // Given two separate credentials for partners in the same company.
+  for (const [credential,subject] of [[partnerOne,"partner-1"],[partnerTwo,"partner-2"]]) {
+    // When either partner authenticates, their identity is retained independently.
+    assert.deepEqual(await authenticatedIdentity(req({Authorization:`Bearer ${credential}`}),partnersEnv),{role:"partner",subject});
+    assert.equal(await authenticatedRole(req({Authorization:`Bearer ${credential}`}),partnersEnv),"partner");
+    const session = await createIdentitySession(partnersEnv,{role:"partner",subject});
+    // Then the signed session contains neither partner credential and works with Bearer or cookie.
+    assert.deepEqual(await authenticatedIdentity(req({Authorization:`Bearer ${session}`}),partnersEnv),{role:"partner",subject});
+    assert.deepEqual(await authenticatedIdentity(req({Cookie:`bot_session=${session}`}),partnersEnv),{role:"partner",subject});
+    const payload=JSON.parse(Buffer.from(session.split(".")[0],"base64url").toString());
+    assert.ok(payload.credentialTag);assert.equal(payload.subject,subject);
+    assert.ok(payload.expires > Date.now()+86300000 && payload.expires <= Date.now()+86400000);
+    assert.doesNotMatch(Buffer.from(session.split(".")[0],"base64url").toString(),/test-partner|test-admin/);
+  }
+});
+
+test("rotating or removing one partner credential revokes only that partner's sessions", async () => {
+  // Given independently bound partner sessions.
+  const first=await createIdentitySession(partnersEnv,{role:"partner",subject:"partner-1"});
+  const second=await createIdentitySession(partnersEnv,{role:"partner",subject:"partner-2"});
+  for (const replacement of [undefined,"short","replacement-partner-one-secret-at-least-24-characters"]) {
+    const changed={...partnersEnv,PARTNER_1_TOKEN:replacement} as Env;
+    // When partner one's credential changes, partner two and the owner remain unaffected.
+    assert.equal(await authenticatedIdentity(req({Authorization:`Bearer ${first}`}),changed),null);
+    assert.deepEqual(await authenticatedIdentity(req({Authorization:`Bearer ${second}`}),changed),{role:"partner",subject:"partner-2"});
+    assert.deepEqual(await authenticatedIdentity(req({Authorization:`Bearer ${secret}`}),changed),{role:"owner",subject:"owner"});
+  }
+});
+
+test("partner identity cannot be swapped, promoted or created without its credential binding", async () => {
+  // Given one valid individual session, changing any signed identity claim invalidates it.
+  const session=await createIdentitySession(partnersEnv,{role:"partner",subject:"partner-1"});
+  const [payload,signature]=session.split(".");
+  for(const change of [{subject:"partner-2"},{role:"owner",subject:"owner"},{credentialTag:"invalid"}]) {
+    const changed={...JSON.parse(Buffer.from(payload,"base64url").toString()),...change};
+    const forged=`${Buffer.from(JSON.stringify(changed)).toString("base64url")}.${signature}`;
+    assert.equal(await authenticatedIdentity(req({Authorization:`Bearer ${forged}`}),partnersEnv),null);
+  }
+  // A correctly signed payload for partner two cannot reuse partner one's credential binding.
+  const swapped = {...JSON.parse(Buffer.from(payload,"base64url").toString()),subject:"partner-2"};
+  const swappedPayload = Buffer.from(JSON.stringify(swapped)).toString("base64url");
+  const signingKey = await crypto.subtle.importKey("raw",new TextEncoder().encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  const swappedSignature = await crypto.subtle.sign("HMAC",signingKey,new TextEncoder().encode(swappedPayload));
+  const wronglyBound = `${swappedPayload}.${b64(new Uint8Array(swappedSignature))}`;
+  assert.equal(await authenticatedIdentity(req({Authorization:`Bearer ${wronglyBound}`}),partnersEnv),null);
+  // Then even a server-signed role without the individual binding fails closed.
+  assert.equal(await authenticatedIdentity(req({Authorization:`Bearer ${await signedSession(Date.now()+60000,"partner")}`}),partnersEnv),null);
+  await assert.rejects(createSession(secret,"partner"),/Papel de acesso inválido/);
+  await assert.rejects(createIdentitySession(partnersEnv,{role:"partner",subject:"owner"}),/Identidade de acesso inválida/);
+  await assert.rejects(createIdentitySession(partnersEnv,{role:"owner",subject:"partner-1"}),/Identidade de acesso inválida/);
+});
+
+test("ambiguous or reused partner keys fail closed without disabling owner access", async () => {
+  // Given credentials reused across partners or privilege levels.
+  for(const invalid of [
+    {...partnersEnv,PARTNER_2_TOKEN:partnerOne},
+    {...partnersEnv,PARTNER_1_TOKEN:secret},
+    {...partnersEnv,EDITOR_TOKEN:partnerOne},
+    {...partnersEnv,PARTNER_1_TOKEN:"short"},
+  ]) {
+    // When partner one tries its former token, it must not inherit partner or owner access.
+    assert.equal(await authenticatedIdentity(req({Authorization:`Bearer ${partnerOne}`}),invalid as Env)?.role === "partner",false);
+    // Then the owner's original credential continues working.
+    assert.equal(await authenticatedRole(req({Authorization:`Bearer ${secret}`}),invalid as Env),"owner");
   }
 });

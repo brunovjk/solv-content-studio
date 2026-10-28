@@ -1,6 +1,9 @@
 # Copie para .dev.vars; nunca adicione esse arquivo ao Git.
 ADMIN_TOKEN=
-# Acesso separado para colaboração editorial (não permite publicar).
+# Uma senha individual para cada sócio, com acesso à operação do painel.
+PARTNER_1_TOKEN=
+PARTNER_2_TOKEN=
+# Opcional: colaboração editorial restrita (não permite publicar).
 EDITOR_TOKEN=
 GEMINI_API_KEY=
 BUFFER_API_KEY=

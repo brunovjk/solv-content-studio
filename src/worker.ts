@@ -1,7 +1,7 @@
 import { dashboardHtml } from "./dashboard.ts";
 import { artworkHtml, canRenderArtwork, renderArtwork } from "./artwork.ts";
 import { listBufferChannels } from "./buffer.ts";
-import { authenticatedRole, createSession, sessionCookie } from "./auth.ts";
+import { authenticatedIdentity, createIdentitySession, sessionCookie } from "./auth.ts";
 import { readLimitedText } from "./feeds.ts";
 import { missingPublicationRequirements, notifyOwner, preparePostVisual, publishPreparedPost, runPipeline } from "./pipeline.ts";
 import { D1Repository } from "./repository.ts";
@@ -68,18 +68,19 @@ async function handle(request: Request, env: Env): Promise<Response> {
     const data = await body(request);
     if (!env.ADMIN_TOKEN || env.ADMIN_TOKEN.length < 24) return failure("Configure ADMIN_TOKEN antes de acessar o painel.",503);
     if (typeof data.token !== "string" || data.token.length > 4096) return failure("Chave de acesso inválida.",401);
-    const role = await authenticatedRole(new Request(request.url,{headers:{Authorization:`Bearer ${data.token}`}}),env);
-    if (!role) return failure("Chave de acesso inválida.",401);
-    const sessionToken = await createSession(env.ADMIN_TOKEN,role);
-    return json({ok:true,role,sessionToken},200,{"Set-Cookie":sessionCookie(request,sessionToken)});
+    const identity = await authenticatedIdentity(new Request(request.url,{headers:{Authorization:`Bearer ${data.token}`}}),env);
+    if (!identity) return failure("Chave de acesso inválida.",401);
+    const sessionToken = await createIdentitySession(env,identity);
+    return json({ok:true,role:identity.role,subject:identity.subject,sessionToken},200,{"Set-Cookie":sessionCookie(request,sessionToken)});
   }
-  const role = await authenticatedRole(request,env);
-  if (!role) return failure("Entre com a chave de acesso do painel.",401);
+  const identity = await authenticatedIdentity(request,env);
+  if (!identity) return failure("Entre com a chave de acesso do painel.",401);
+  const role = identity.role;
   if (role === "editor" && request.method !== "GET" && request.method !== "HEAD" && (path === "/api/test-batch" || path === "/api/channels/sync" || path === "/api/posts/archive" || /\/approve$/.test(path))) return failure("Apenas o responsável pode alterar a publicação nas redes.",403);
   if (path === "/api/logout" && request.method === "POST") return json({ok:true},200,{"Set-Cookie":sessionCookie(request,"",true)});
   if (path === "/api/state" && request.method === "GET") {
     const [settings,posts,runs,busy] = await Promise.all([repo.getSettings(),repo.listPosts(),repo.listRuns(),repo.busy()]);
-    return json({role,settings,posts,runs,busy,readiness:{demo:env.DEMO_MODE === "true",gemini:Boolean(env.GEMINI_API_KEY),buffer:Boolean(env.BUFFER_API_KEY),illustration:Boolean(env.AI),artwork:canRenderArtwork(env),publicUrl:Boolean(env.PUBLIC_BASE_URL?.startsWith("https://")),admin:true},publicationMissing:missingPublicationRequirements(env,settings)});
+    return json({role,subject:identity.subject,settings,posts,runs,busy,readiness:{demo:env.DEMO_MODE === "true",gemini:Boolean(env.GEMINI_API_KEY),buffer:Boolean(env.BUFFER_API_KEY),illustration:Boolean(env.AI),artwork:canRenderArtwork(env),publicUrl:Boolean(env.PUBLIC_BASE_URL?.startsWith("https://")),admin:true},publicationMissing:missingPublicationRequirements(env,settings)});
   }
   if (path === "/api/settings" && request.method === "PUT") {
     const settings = validateSettings(await body(request));

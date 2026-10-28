@@ -6,9 +6,9 @@ As chaves pertencem ao usuário e ficam nos secrets do Worker (ou `.dev.vars` lo
 
 O Firebase publica os arquivos estáticos da interface. O backend Cloudflare continua responsável por autenticação, D1, fila, geração de conteúdo e Buffer. `PUBLIC_API_BASE_URL` é o endereço público da API usado pelo build, sem tokens na URL.
 
-Configure `ALLOWED_ORIGINS` no Worker com as origens HTTPS exatas do projeto Firebase. Autorizações são verificadas no servidor. O acesso editorial permite as operações de conteúdo previstas para o editor; publicação, canais e configurações de entrega continuam restritos ao administrador.
+Configure `ALLOWED_ORIGINS` no Worker com as origens HTTPS exatas do projeto Firebase. Autorizações são verificadas no servidor. Administrador e sócios podem editar conteúdo, publicar e administrar canais, agenda e configurações de entrega. O editor opcional mantém acesso restrito à criação e revisão. Todos usam os mesmos dados da instalação.
 
-Use `ADMIN_TOKEN` e `EDITOR_TOKEN` distintos. As chaves Gemini, Buffer e integrações opcionais ficam nos secrets do backend. O repositório contém somente `.dev.vars.example`, com valores vazios, e `wrangler.example.jsonc`, com identificadores de exemplo. `wrangler.jsonc` e `.dev.vars` preenchidos são arquivos locais ignorados.
+Use `ADMIN_TOKEN`, `PARTNER_1_TOKEN` e `PARTNER_2_TOKEN` individuais e distintos. `EDITOR_TOKEN` é opcional e continua restrito à criação editorial. Trocar ou remover uma credencial de sócio revoga apenas suas sessões. As chaves Gemini, Buffer e integrações opcionais ficam nos secrets do backend. O repositório contém somente `.dev.vars.example`, com valores vazios, e `wrangler.example.jsonc`, com identificadores de exemplo. `wrangler.jsonc` e `.dev.vars` preenchidos são arquivos locais ignorados.
 
 ## Cloudflare Workers AI · FLUX
 
@@ -62,7 +62,7 @@ Referências oficiais:
 1. Crie a conta e conecte Instagram profissional, LinkedIn, Facebook ou Perfil da Empresa no Google.
 2. Autorize as permissões de publicação e confirme que cada canal permite **publicação automática**. Uma conta configurada somente para notificação exige uma ação manual e não atende ao fluxo autônomo.
 3. Gere uma personal API key em [Buffer API](https://publish.buffer.com/settings/api).
-4. Configure `BUFFER_API_KEY` como secret e sincronize os canais pelo painel administrativo do bot.
+4. Configure `BUFFER_API_KEY` como secret e sincronize os canais no painel com o acesso de administrador ou sócio.
 5. Ative os canais desejados; desconectados, bloqueados ou com fila pausada aparecem desativados na sincronização.
 
 O projeto usa a API GraphQL atual em `https://api.buffer.com`, com `Authorization: Bearer`. Descobre organizações e canais, agenda cada imagem com `createPost` e consulta o status por `post(input: { id })`. `customScheduled` agenda para dois minutos após a execução, sem depender dos horários da fila; `schedulingType: automatic`, `saveToDraft: false` e `needsApproval: false` permitem o fluxo sem revisão prévia autorizado pelo usuário. A legenda inclui a referência e hashtags, com até 2200 caracteres (1500 para Google).

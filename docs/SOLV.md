@@ -1,6 +1,6 @@
 # Solv · preparação editorial
 
-Marca oficial: Solv · @solv_tec. A rotina permanece pausada durante a revisão da campanha. O painel editorial é hospedado no Firebase e usa o backend Cloudflare protegido; o editor revisa conteúdo, enquanto a publicação permanece sob controle administrativo.
+Marca oficial: Solv · @solv_tec. A rotina permanece pausada durante a revisão da campanha. O painel editorial é hospedado no Firebase e usa o backend Cloudflare protegido; administrador e sócios podem criar, revisar e publicar conteúdo, enquanto o editor opcional mantém acesso restrito à criação.
 
 ## Oferta
 
@@ -45,7 +45,7 @@ Antes da prospecção, confira contatos reais, links de WhatsApp e redes, aprese
 
 Avalie cada post pela clareza da ideia, relevância para o comprador, legibilidade da arte no celular e coerência da chamada para ação. As peças são rascunhos para revisão; imagens ilustrativas não substituem demonstrações reais de um site e não comprovam resultados.
 
-O acesso editorial pode ser compartilhado para revisar conteúdo, editar textos e solicitar gerações autorizadas. Não compartilhe a credencial administrativa para essa finalidade. Publicar ou mudar a agenda e os canais exige acesso administrativo.
+Os sócios usam credenciais individuais (`PARTNER_1_TOKEN` e `PARTNER_2_TOKEN`) e podem editar, gerar, publicar e administrar agenda e canais. Todos veem os mesmos posts e configurações da Solv. O acesso `EDITOR_TOKEN` continua opcional e restrito à criação e revisão. O login do painel não concede permissões para alterar o código de produção, fazer deploy ou administrar a infraestrutura; esses acessos são separados.
 
 ## Retomar publicação
 

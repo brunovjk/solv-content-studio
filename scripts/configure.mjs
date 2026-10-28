@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync, chmodSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { createInterface } from "node:readline/promises";
+import { parseEnvValues } from "./env-values.mjs";
 
 if (!process.stdin.isTTY) {
   console.error("Execute npm run configure em um terminal interativo.");
@@ -8,9 +9,7 @@ if (!process.stdin.isTTY) {
 }
 const file = ".dev.vars";
 const current = existsSync(file) ? readFileSync(file,"utf8") : "";
-const values = Object.fromEntries(current.split("\n").filter(line=>/^[A-Z_]+=/.test(line)).map(line=>{
-  const i=line.indexOf("="); return [line.slice(0,i),line.slice(i+1).replace(/^['"]|['"]$/g,"")];
-}));
+const values = parseEnvValues(current);
 values.ADMIN_TOKEN ||= randomBytes(24).toString("base64url");
 values.DEMO_MODE ||= "true";
 
