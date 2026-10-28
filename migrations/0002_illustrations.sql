@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS illustrations (post_id TEXT PRIMARY KEY, data BLOB NOT NULL);

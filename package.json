@@ -1,0 +1,32 @@
+{
+  "name": "solv-content-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "db:remote": "wrangler d1 migrations apply DB --remote",
+    "check": "node scripts/check.mjs",
+    "configure": "node scripts/configure.mjs",
+    "test:ui": "node scripts/ui-smoke.mjs",
+    "check:feeds": "node scripts/check-feeds.mjs",
+    "build:hosting": "node scripts/build-hosting.mjs",
+    "deploy:hosting": "npm run build:hosting && npx --yes firebase-tools@15.34.1 deploy --only hosting"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261022.1",
+    "playwright-core": "^1.64.1",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.151.3"
+  }
+}

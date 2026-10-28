@@ -1,0 +1,12 @@
+# Copie para .dev.vars; nunca adicione esse arquivo ao Git.
+ADMIN_TOKEN=
+# Acesso separado para colaboração editorial (não permite publicar).
+EDITOR_TOKEN=
+GEMINI_API_KEY=
+BUFFER_API_KEY=
+CF_ACCOUNT_ID=
+CF_BROWSER_API_TOKEN=
+PUBLIC_BASE_URL=
+# Alertas opcionais para o dono do bot.
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=

@@ -1,0 +1,52 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "solv-content-studio",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-22",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  },
+  "browser": {
+    "binding": "BROWSER",
+    "remote": true
+  },
+  "triggers": {
+    "crons": []
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "JOBS",
+        "queue": "solv-content-jobs"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "solv-content-jobs",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 0,
+        "max_concurrency": 1
+      }
+    ]
+  },
+  "vars": {
+    "GEMINI_MODEL": "gemini-3.5-flash-lite",
+    "DEMO_MODE": "true",
+    "PUBLIC_BASE_URL": "https://YOUR_WORKER.workers.dev",
+    "ALLOWED_ORIGINS": "https://YOUR_PROJECT.web.app,https://YOUR_PROJECT.firebaseapp.com"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "solv-content-studio",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

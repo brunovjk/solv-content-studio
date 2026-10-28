@@ -1,0 +1,73 @@
+import { readFileSync, mkdirSync } from "node:fs";
+import assert from "node:assert/strict";
+import { chromium } from "playwright-core";
+
+const base = process.env.BOT_TEST_URL || "http://127.0.0.1:8787";
+const token = readFileSync(".dev.vars","utf8").match(/^ADMIN_TOKEN=(.+)$/m)?.[1]?.replace(/^["']|["']$/g,"");
+if (!token) throw new Error("Configure o acesso local antes do teste.");
+mkdirSync("test-results",{recursive:true});
+const browser = await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",args:["--no-sandbox"]});
+const context = await browser.newContext({viewport:{width:1600,height:1100}});
+const page = await context.newPage();
+const errors = [];
+page.on("pageerror",error=>errors.push(error.message));
+try {
+  assert.equal((await context.request.get(base+"/api/state")).status(),401);
+  await page.goto(base);
+  await page.locator("#admin-token").fill(token);
+  await page.locator("#login-submit").click();
+  await page.locator("#app").waitFor({state:"visible"});
+  let state = await (await context.request.get(base+"/api/state")).json();
+  assert.ok(state.settings.brandHandle);
+  const original = structuredClone(state.settings);
+  // Save through the actual form, then verify the worker persisted the setting.
+  await page.locator('[data-view="settings"]').click();
+  await page.locator('input[name="mode"][value="approval"]').check();
+  await page.locator("#save-settings").click();
+  await page.waitForFunction(()=>document.querySelector("#save-status").textContent === "Tudo salvo.");
+  assert.equal((await (await context.request.get(base+"/api/state")).json()).settings.mode,"approval");
+  await context.request.put(base+"/api/settings",{data:original});
+  await page.locator('[data-view="overview"]').click();
+  const before = state.posts.length;
+  await page.locator('#view-overview [data-run="demo"]').click();
+  let post;
+  for (let i=0;i<80;i++) {
+    state = await (await context.request.get(base+"/api/state")).json();
+    post = state.posts.find(p=>p.demo && !p.deliveries.length);
+    if (post && state.posts.length > before && !state.busy) break;
+    await page.waitForTimeout(500);
+  }
+  assert.ok(post && state.posts.length > before,"Queue job did not create the demo");
+  assert.equal(post.demo,true);
+  assert.equal(post.status,"ready");
+  assert.equal(post.deliveries.length,0,"Demo must not create any live deliveries");
+  assert.equal(state.settings.mode,original.mode);
+  await page.reload();
+  await page.locator("#featured-art iframe").waitFor();
+  await page.waitForTimeout(300);
+  assert.ok(await page.locator("#featured-title").innerText());
+  await page.screenshot({path:"test-results/dashboard-desktop.png",fullPage:true});
+  await page.locator('[data-view="posts"]').click();
+  await page.locator("#post-detail h2").waitFor();
+  assert.equal(await page.locator('#post-detail button').filter({hasText:/Aprovar|Enviar/}).count(),0,"Demo must not allow live delivery");
+  await page.screenshot({path:"test-results/posts-desktop.png",fullPage:true});
+  const art = await context.newPage();
+  await art.setViewportSize({width:1080,height:1350});
+  await art.goto(base+"/preview/"+post.id);
+  await art.screenshot({path:"test-results/artwork.png"});
+  const artBounds = await art.locator("footer").boundingBox();
+  assert.ok(artBounds && artBounds.y+artBounds.height < 1340,"Artwork footer is clipped");
+  await page.locator('[data-view="connections"]').click();
+  assert.equal(await page.getByRole("heading",{name:"Canais de publicação",exact:true}).count(),1);
+  for (const channel of state.settings.channels) assert.ok((await page.locator("#channels-list").innerText()).includes(channel.name));
+  assert.equal(await page.locator("#sync-channels").isDisabled(),!state.readiness.buffer);
+  await page.screenshot({path:"test-results/connections-desktop.png",fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  await page.locator('[data-view="overview"]').click();
+  await page.screenshot({path:"test-results/dashboard-mobile.png",fullPage:true});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth+1),true,"Mobile layout overflows");
+  await page.locator('[data-view="settings"]').click();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth+1),true,"Mobile settings overflow");
+  assert.deepEqual(errors,[],"Browser JavaScript errors");
+  console.log(JSON.stringify({ok:true,checks:["login","settings persistence","queue execution","demo isolation","artwork layout","channel onboarding","mobile layout"],postId:post.id,screenshots:"test-results/"},null,2));
+} finally { await browser.close(); }
